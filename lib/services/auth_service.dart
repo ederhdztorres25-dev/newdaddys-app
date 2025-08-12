@@ -72,35 +72,41 @@ class AuthService extends ChangeNotifier {
   Future<AuthResult> signInWithGoogle() async {
     try {
       print('AuthService: Iniciando login con Google');
-      
+
       // Inicializar Google Sign-In
       final GoogleSignIn googleSignIn = GoogleSignIn();
-      
+
       // Verificar si el usuario ya está logueado con Google
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
-      
+
       if (googleUser == null) {
         print('AuthService: Usuario canceló el login con Google');
         return AuthResult.error('Login cancelado por el usuario');
       }
-      
+
       // Obtener los detalles de autenticación
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
       // Crear credenciales para Firebase
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
-      
+
       // Autenticar con Firebase
-      final UserCredential userCredential = await _auth.signInWithCredential(credential);
-      
-      print('AuthService: Login con Google exitoso para: ${userCredential.user?.email}');
+      final UserCredential userCredential = await _auth.signInWithCredential(
+        credential,
+      );
+
+      print(
+        'AuthService: Login con Google exitoso para: ${userCredential.user?.email}',
+      );
       return AuthResult.success(message: 'Login con Google exitoso');
-      
     } on FirebaseAuthException catch (e) {
-      print('AuthService: Error de Firebase en login con Google: ${e.code} - ${e.message}');
+      print(
+        'AuthService: Error de Firebase en login con Google: ${e.code} - ${e.message}',
+      );
       String errorMessage = _getErrorMessage(e.code);
       return AuthResult.error(errorMessage);
     } catch (e) {
@@ -139,8 +145,15 @@ class AuthService extends ChangeNotifier {
   Future<void> signOut() async {
     try {
       print('AuthService: Iniciando cierre de sesión');
+
+      // Cerrar sesión de Firebase
       await _auth.signOut();
-      print('AuthService: Cierre de sesión exitoso');
+
+      // Cerrar sesión de Google también
+      final GoogleSignIn googleSignIn = GoogleSignIn();
+      await googleSignIn.signOut();
+
+      print('AuthService: Cierre de sesión exitoso (Firebase + Google)');
     } catch (e) {
       print('AuthService: Error en cierre de sesión: $e');
     }
