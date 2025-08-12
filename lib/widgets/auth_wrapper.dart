@@ -4,8 +4,8 @@ import 'package:newdaddys/services/auth_service.dart';
 import 'package:newdaddys/screens/main_menu_screen.dart';
 import 'package:newdaddys/screens/login_screen.dart';
 
-/// Wrapper de autenticación que verifica el estado de autenticación
-/// y redirige al usuario a la pantalla correspondiente
+/// Wrapper de autenticación que maneja la navegación automática
+/// basada en el estado de autenticación del usuario
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
@@ -13,15 +13,19 @@ class AuthWrapper extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<AuthService>(
       builder: (context, authService, child) {
-        // Mostrar loading mientras se verifica el estado de autenticación
-        if (authService.currentUser == null && !authService.isAuthenticated) {
-          // Usuario no autenticado - mostrar pantalla de login
-          return const LoginScreen();
-        } else {
-          // Usuario autenticado - mostrar menú principal
-          return const MainMenuScreen();
-        }
+        return _buildScreen(authService);
       },
     );
+  }
+
+  /// Construye la pantalla correspondiente según el estado de autenticación
+  Widget _buildScreen(AuthService authService) {
+    // Si el usuario está autenticado, mostrar el menú principal
+    if (authService.isAuthenticated) {
+      return const MainMenuScreen();
+    }
+    
+    // Si no está autenticado, mostrar la pantalla de login
+    return const LoginScreen();
   }
 }
