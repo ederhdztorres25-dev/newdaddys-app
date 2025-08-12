@@ -25,7 +25,7 @@ class AuthService extends ChangeNotifier {
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   // ==================== GETTERS ====================
-  
+
   /// Verifica si el usuario está autenticado
   bool get isAuthenticated => _auth.currentUser != null;
 
@@ -36,13 +36,13 @@ class AuthService extends ChangeNotifier {
   String? get userEmail => _auth.currentUser?.email;
 
   // ==================== CONSTRUCTOR ====================
-  
+
   AuthService() {
     _setupAuthStateListener();
   }
 
   // ==================== CONFIGURACIÓN ====================
-  
+
   /// Configura el listener para cambios en el estado de autenticación
   void _setupAuthStateListener() {
     _auth.authStateChanges().listen((User? user) {
@@ -51,7 +51,7 @@ class AuthService extends ChangeNotifier {
   }
 
   // ==================== REGISTRO ====================
-  
+
   /// Registra un nuevo usuario con email y contraseña
   Future<AuthResult> createUserWithEmailAndPassword({
     required String email,
@@ -59,7 +59,7 @@ class AuthService extends ChangeNotifier {
   }) async {
     try {
       _log('Iniciando registro con email: $email');
-      
+
       final UserCredential result = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
@@ -69,8 +69,9 @@ class AuthService extends ChangeNotifier {
       await result.user?.sendEmailVerification();
 
       _log('Registro exitoso, email de verificación enviado');
-      return AuthResult.success(message: 'Registro exitoso. Verifica tu email.');
-      
+      return AuthResult.success(
+        message: 'Registro exitoso. Verifica tu email.',
+      );
     } on FirebaseAuthException catch (e) {
       _log('Error en registro: ${e.code} - ${e.message}');
       return AuthResult.error(_getErrorMessage(e.code));
@@ -81,7 +82,7 @@ class AuthService extends ChangeNotifier {
   }
 
   // ==================== LOGIN ====================
-  
+
   /// Inicia sesión con email y contraseña
   Future<AuthResult> signInWithEmailAndPassword({
     required String email,
@@ -89,12 +90,11 @@ class AuthService extends ChangeNotifier {
   }) async {
     try {
       _log('Iniciando login con email: $email');
-      
+
       await _auth.signInWithEmailAndPassword(email: email, password: password);
-      
+
       _log('Login exitoso');
       return AuthResult.success(message: 'Login exitoso');
-      
     } on FirebaseAuthException catch (e) {
       _log('Error en login: ${e.code} - ${e.message}');
       return AuthResult.error(_getErrorMessage(e.code));
@@ -117,8 +117,9 @@ class AuthService extends ChangeNotifier {
       }
 
       // Obtener credenciales de Google
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
       // Crear credenciales para Firebase
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
@@ -126,11 +127,12 @@ class AuthService extends ChangeNotifier {
       );
 
       // Autenticar con Firebase
-      final UserCredential userCredential = await _auth.signInWithCredential(credential);
+      final UserCredential userCredential = await _auth.signInWithCredential(
+        credential,
+      );
 
       _log('Login con Google exitoso para: ${userCredential.user?.email}');
       return AuthResult.success(message: 'Login con Google exitoso');
-      
     } on FirebaseAuthException catch (e) {
       _log('Error de Firebase en login con Google: ${e.code} - ${e.message}');
       return AuthResult.error(_getErrorMessage(e.code));
@@ -141,7 +143,7 @@ class AuthService extends ChangeNotifier {
   }
 
   // ==================== VERIFICACIÓN DE EMAIL ====================
-  
+
   /// Verifica si el email del usuario actual está verificado
   Future<AuthResult> checkEmailVerification() async {
     try {
@@ -169,7 +171,7 @@ class AuthService extends ChangeNotifier {
   }
 
   // ==================== CERRAR SESIÓN ====================
-  
+
   /// Cierra la sesión del usuario (Firebase + Google)
   Future<void> signOut() async {
     try {
@@ -188,7 +190,7 @@ class AuthService extends ChangeNotifier {
   }
 
   // ==================== ELIMINAR CUENTA ====================
-  
+
   /// Elimina la cuenta del usuario actual
   Future<AuthResult> deleteAccount() async {
     try {
@@ -200,7 +202,7 @@ class AuthService extends ChangeNotifier {
   }
 
   // ==================== UTILIDADES ====================
-  
+
   /// Convierte códigos de error de Firebase a mensajes legibles
   String _getErrorMessage(String code) {
     switch (code) {
