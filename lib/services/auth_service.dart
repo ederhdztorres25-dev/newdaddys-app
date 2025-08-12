@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 /// Servicio de autenticación con Firebase Auth
 class AuthService extends ChangeNotifier {
@@ -67,17 +68,43 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  /// Login con Google (simulación por ahora - requiere configuración adicional)
+  /// Login con Google
   Future<AuthResult> signInWithGoogle() async {
     try {
       print('AuthService: Iniciando login con Google');
-      // TODO: Implementar autenticación real con Google
-      // Por ahora mantenemos la simulación
-      await Future.delayed(const Duration(milliseconds: 500));
-      print('AuthService: Login con Google exitoso (simulado)');
+      
+      // Inicializar Google Sign-In
+      final GoogleSignIn googleSignIn = GoogleSignIn();
+      
+      // Verificar si el usuario ya está logueado con Google
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      
+      if (googleUser == null) {
+        print('AuthService: Usuario canceló el login con Google');
+        return AuthResult.error('Login cancelado por el usuario');
+      }
+      
+      // Obtener los detalles de autenticación
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      
+      // Crear credenciales para Firebase
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      
+      // Autenticar con Firebase
+      final UserCredential userCredential = await _auth.signInWithCredential(credential);
+      
+      print('AuthService: Login con Google exitoso para: ${userCredential.user?.email}');
       return AuthResult.success(message: 'Login con Google exitoso');
+      
+    } on FirebaseAuthException catch (e) {
+      print('AuthService: Error de Firebase en login con Google: ${e.code} - ${e.message}');
+      String errorMessage = _getErrorMessage(e.code);
+      return AuthResult.error(errorMessage);
     } catch (e) {
-      print('AuthService: Error en login con Google: $e');
+      print('AuthService: Error inesperado en login con Google: $e');
       return AuthResult.error('Error en login con Google: $e');
     }
   }
