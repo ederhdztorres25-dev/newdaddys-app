@@ -19,7 +19,17 @@ import 'package:newdaddys/routes/app_routes.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Verificar si Firebase ya está inicializado
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    // Si ya está inicializado, continuar
+    print('Firebase ya inicializado: $e');
+  }
+
   runApp(const MyApp());
 }
 

@@ -9,6 +9,7 @@ class CustomTextField extends StatelessWidget {
   final bool isPassword;
   final TextEditingController? controller;
   final String? Function(String?)? validator;
+  final void Function(String)? onChanged;
 
   const CustomTextField({
     super.key,
@@ -18,6 +19,7 @@ class CustomTextField extends StatelessWidget {
     this.isPassword = false,
     this.controller,
     this.validator,
+    this.onChanged,
   });
 
   @override
@@ -25,6 +27,7 @@ class CustomTextField extends StatelessWidget {
     return TextFormField(
       controller: controller,
       validator: validator,
+      onChanged: onChanged,
       style: const TextStyle(color: AppColors.secondary),
       obscureText: isPassword,
       maxLines: 1,
@@ -32,8 +35,9 @@ class CustomTextField extends StatelessWidget {
         filled: true,
         fillColor: AppColors.primary,
         hintText: hintText,
-        hintStyle:
-            AppFonts.bodyMedium.copyWith(color: AppColors.placeholderText),
+        hintStyle: AppFonts.bodyMedium.copyWith(
+          color: AppColors.placeholderText,
+        ),
         prefixIcon: Icon(prefixIcon, color: AppColors.placeholderText),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),

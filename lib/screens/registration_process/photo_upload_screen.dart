@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:newdaddys/theme/app_colors.dart';
 import 'package:newdaddys/theme/app_fonts.dart';
 import 'package:newdaddys/theme/app_sizes.dart';
@@ -6,6 +7,7 @@ import 'package:newdaddys/widgets/custom_app_bar.dart';
 import 'package:newdaddys/widgets/custom_button.dart';
 import 'dart:io'; // Se necesitará para manejar los archivos de imagen
 import 'package:newdaddys/routes/app_routes.dart';
+import 'package:newdaddys/services/firestore_service.dart';
 
 class PhotoUploadScreen extends StatefulWidget {
   const PhotoUploadScreen({super.key});
@@ -17,6 +19,8 @@ class PhotoUploadScreen extends StatefulWidget {
 class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
   // Lista para almacenar las imágenes seleccionadas (usando File)
   final List<File?> _images = List.generate(6, (_) => null);
+  bool _isLoading = false;
+  final FirestoreService _firestore = FirestoreService();
 
   // Función para simular la selección de una imagen
   void _pickImage(int index) {
@@ -25,6 +29,59 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
     // setState(() {
     //   _images[index] = pickedFile;
     // });
+  }
+
+  Future<void> _saveAndContinue() async {
+    // Por ahora, permitir continuar sin fotos (para testing)
+    // En producción, podrías requerir al menos una foto
+
+    setState(() => _isLoading = true);
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        _showErrorDialog('Usuario no autenticado');
+        return;
+      }
+
+      // Simular URLs de fotos (en producción, subirías a Firebase Storage)
+      final photoUrls = <String>[];
+      for (int i = 0; i < _images.length; i++) {
+        if (_images[i] != null) {
+          // Aquí subirías la imagen a Firebase Storage y obtendrías la URL
+          photoUrls.add('https://example.com/photo_$i.jpg');
+        }
+      }
+
+      // Guardar en Firestore (por ahora con URLs vacías)
+      await _firestore.updatePhotos(userId: user.uid, photoUrls: photoUrls);
+
+      // Navegar a la siguiente pantalla
+      if (mounted) {
+        Navigator.pushNamed(context, AppRoutes.phoneNumber);
+      }
+    } catch (e) {
+      _showErrorDialog('Error al guardar: ${e.toString()}');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Error'),
+            content: Text(message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+    );
   }
 
   @override
@@ -40,9 +97,7 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
-      appBar: const CustomAppBar(
-        title: 'Crea tu perfil',
-      ),
+      appBar: const CustomAppBar(title: 'Crea tu perfil'),
       body: SafeArea(
         child: Padding(
           padding: EdgeInsets.symmetric(
@@ -52,39 +107,38 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(height: screenHeight * 0.05),
-              Text('Subir fotos',
-                  style: AppFonts.h2.copyWith(color: AppColors.secondary)),
+              Text(
+                'Subir fotos',
+                style: AppFonts.h2.copyWith(color: AppColors.secondary),
+              ),
               SizedBox(height: screenHeight * 0.01),
               Text(
                 'Súper, añade fotos para que te conozcan mejor',
-                style: AppFonts.bodyMedium
-                    .copyWith(color: AppColors.placeholderText),
+                style: AppFonts.bodyMedium.copyWith(
+                  color: AppColors.placeholderText,
+                ),
               ),
               SizedBox(height: screenHeight * 0.05),
 
               // Cuadrícula de fotos
-              _PhotoGrid(
-                images: _images,
-                onPickImage: _pickImage,
-              ),
+              _PhotoGrid(images: _images, onPickImage: _pickImage),
 
               const Spacer(),
 
               // Mensaje de advertencia
               Text(
                 'Las fotos deben representarte. No se permiten imágenes de otras personas o contenido inapropiado.',
-                style: AppFonts.bodySmall
-                    .copyWith(color: AppColors.placeholderText),
+                style: AppFonts.bodySmall.copyWith(
+                  color: AppColors.placeholderText,
+                ),
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: screenHeight * 0.03),
 
               // Botón de siguiente
               CustomButton(
-                text: 'Siguiente',
-                onPressed: () {
-                  Navigator.pushNamed(context, AppRoutes.phoneNumber);
-                },
+                text: _isLoading ? 'Guardando...' : 'Siguiente',
+                onPressed: !_isLoading ? _saveAndContinue : null,
                 height: screenHeight * AppSizes.buttonHeight,
               ),
               SizedBox(height: screenHeight * 0.05),
@@ -151,24 +205,19 @@ class _PhotoGrid extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.primary,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: AppColors.borderColor,
-            width: 2,
-          ),
+          border: Border.all(color: AppColors.borderColor, width: 2),
         ),
-        child: images[index] == null
-            ? const Icon(
-                Icons.add,
-                color: AppColors.placeholderText,
-                size: 40,
-              )
-            : ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.file(
-                  images[index]!,
-                  fit: BoxFit.cover,
+        child:
+            images[index] == null
+                ? const Icon(
+                  Icons.add,
+                  color: AppColors.placeholderText,
+                  size: 40,
+                )
+                : ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.file(images[index]!, fit: BoxFit.cover),
                 ),
-              ),
       ),
     );
   }

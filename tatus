@@ -1,0 +1,5 @@
+[33m27ce761[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Punto seguro establecido: UI original restaurada con sistema de autenticacion funcional
+[33m235389b[m[33m ([m[1;31morigin/feature/google-login[m[33m, [m[1;32mfeature/google-login[m[33m)[m Fix code formatting and line endings
+[33mcbc6919[m Refactor authentication system for better code organization and readability
+[33m4344c24[m Fix Google Sign-In logout behavior
+[33m510a33b[m Add Google Sign-In implementation

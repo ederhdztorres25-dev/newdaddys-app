@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:newdaddys/theme/app_colors.dart';
 import 'package:newdaddys/theme/app_fonts.dart';
 import 'package:newdaddys/theme/app_sizes.dart';
@@ -6,6 +7,7 @@ import 'package:newdaddys/widgets/custom_app_bar.dart';
 import 'package:newdaddys/widgets/custom_button.dart';
 import 'package:newdaddys/widgets/selection_button.dart';
 import 'package:newdaddys/routes/app_routes.dart';
+import 'package:newdaddys/services/firestore_service.dart';
 
 class ProfilePreferenceScreen extends StatefulWidget {
   const ProfilePreferenceScreen({super.key});
@@ -17,11 +19,62 @@ class ProfilePreferenceScreen extends StatefulWidget {
 
 class _ProfilePreferenceScreenState extends State<ProfilePreferenceScreen> {
   int? _selectedIndex; // 0 for baby, 1 for daddy/mommy
+  bool _isLoading = false;
+  final FirestoreService _firestore = FirestoreService();
 
   void _onSelection(int index) {
     setState(() {
       _selectedIndex = index;
     });
+  }
+
+  Future<void> _saveAndContinue() async {
+    if (_selectedIndex == null) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        _showErrorDialog('Usuario no autenticado');
+        return;
+      }
+
+      // Convertir índice a userType
+      final userType = _selectedIndex == 0 ? 'baby' : 'daddy/mommy';
+
+      // Guardar en Firestore
+      await _firestore.updateProfilePreference(
+        userId: user.uid,
+        userType: userType,
+      );
+
+      // Navegar a la siguiente pantalla
+      if (mounted) {
+        Navigator.pushNamed(context, AppRoutes.personalDetails);
+      }
+    } catch (e) {
+      _showErrorDialog('Error al guardar: ${e.toString()}');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Error'),
+            content: Text(message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+    );
   }
 
   @override
@@ -31,9 +84,7 @@ class _ProfilePreferenceScreenState extends State<ProfilePreferenceScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
-      appBar: const CustomAppBar(
-        title: 'Crea tu perfil',
-      ),
+      appBar: const CustomAppBar(title: 'Crea tu perfil'),
       body: SafeArea(
         child: Padding(
           padding: EdgeInsets.symmetric(
@@ -43,9 +94,10 @@ class _ProfilePreferenceScreenState extends State<ProfilePreferenceScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(height: screenHeight * 0.05),
-              Text('¿Qué estás buscando?',
-                  style:
-                      AppFonts.bodyMedium.copyWith(color: AppColors.secondary)),
+              Text(
+                '¿Qué estás buscando?',
+                style: AppFonts.bodyMedium.copyWith(color: AppColors.secondary),
+              ),
               SizedBox(height: screenHeight * 0.05),
               SelectionButton(
                 text: 'Ser suggar baby',
@@ -62,12 +114,11 @@ class _ProfilePreferenceScreenState extends State<ProfilePreferenceScreen> {
               ),
               const Spacer(),
               CustomButton(
-                text: 'Siguiente',
-                onPressed: _selectedIndex != null
-                    ? () {
-                        Navigator.pushNamed(context, AppRoutes.personalDetails);
-                      }
-                    : null, // Disable button if nothing is selected
+                text: _isLoading ? 'Guardando...' : 'Siguiente',
+                onPressed:
+                    _selectedIndex != null && !_isLoading
+                        ? _saveAndContinue
+                        : null, // Disable button if nothing is selected or loading
                 height: screenHeight * AppSizes.buttonHeight,
               ),
               SizedBox(height: screenHeight * 0.05),

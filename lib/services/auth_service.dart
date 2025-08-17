@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:newdaddys/services/firestore_service.dart';
 
 /// Resultado de una operación de autenticación
 class AuthResult {
@@ -23,6 +24,7 @@ class AuthResult {
 class AuthService extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final FirestoreService _firestore = FirestoreService();
 
   // ==================== GETTERS ====================
 
@@ -68,7 +70,18 @@ class AuthService extends ChangeNotifier {
       // Enviar email de verificación automáticamente
       await result.user?.sendEmailVerification();
 
-      _log('Registro exitoso, email de verificación enviado');
+      // Crear perfil básico en Firestore si no existe
+      if (result.user != null) {
+        final exists = await _firestore.profileExists(result.user!.uid);
+        if (!exists) {
+          await _firestore.createUserProfile(
+            userId: result.user!.uid,
+            email: email,
+          );
+        }
+      }
+
+      _log('Registro exitoso, email de verificación enviado y perfil creado');
       return AuthResult.success(
         message: 'Registro exitoso. Verifica tu email.',
       );
@@ -130,6 +143,17 @@ class AuthService extends ChangeNotifier {
       final UserCredential userCredential = await _auth.signInWithCredential(
         credential,
       );
+
+      // Crear perfil básico si no existe
+      if (userCredential.user != null) {
+        final exists = await _firestore.profileExists(userCredential.user!.uid);
+        if (!exists) {
+          await _firestore.createUserProfile(
+            userId: userCredential.user!.uid,
+            email: userCredential.user!.email ?? '',
+          );
+        }
+      }
 
       _log('Login con Google exitoso para: ${userCredential.user?.email}');
       return AuthResult.success(message: 'Login con Google exitoso');
