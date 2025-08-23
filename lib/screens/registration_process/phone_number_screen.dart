@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:newdaddys/theme/app_colors.dart';
 import 'package:newdaddys/theme/app_fonts.dart';
 import 'package:newdaddys/theme/app_sizes.dart';
 import 'package:newdaddys/widgets/custom_app_bar.dart';
 import 'package:newdaddys/widgets/custom_button.dart';
 import 'package:newdaddys/routes/app_routes.dart';
-import 'package:newdaddys/services/firestore_service.dart';
+import 'package:newdaddys/mixins/registration_screen_mixin.dart';
+import 'package:newdaddys/constants/registration_options.dart';
 
 class PhoneNumberScreen extends StatefulWidget {
   const PhoneNumberScreen({super.key});
@@ -15,10 +15,9 @@ class PhoneNumberScreen extends StatefulWidget {
   _PhoneNumberScreenState createState() => _PhoneNumberScreenState();
 }
 
-class _PhoneNumberScreenState extends State<PhoneNumberScreen> {
+class _PhoneNumberScreenState extends State<PhoneNumberScreen>
+    with RegistrationScreenMixin {
   String? _phoneNumber;
-  bool _isLoading = false;
-  final FirestoreService _firestore = FirestoreService();
   final TextEditingController _phoneController = TextEditingController();
 
   @override
@@ -28,55 +27,23 @@ class _PhoneNumberScreenState extends State<PhoneNumberScreen> {
   }
 
   Future<void> _saveAndContinue() async {
-    if (_phoneNumber == null || _phoneNumber!.trim().isEmpty) {
-      _showErrorDialog('Por favor ingresa tu número de teléfono');
-      return;
-    }
+    if (!validateRequiredField(_phoneNumber, 'tu número de teléfono')) return;
 
-    setState(() => _isLoading = true);
-
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        _showErrorDialog('Usuario no autenticado');
-        return;
-      }
+    await executeWithLoading(() async {
+      final user = getCurrentUser()!;
 
       // Formatear número con código de país
       final formattedPhone = '+52 $_phoneNumber';
 
       // Guardar en Firestore
-      await _firestore.updatePhoneNumber(
+      await firestore.updatePhoneNumber(
         userId: user.uid,
         phoneNumber: formattedPhone,
       );
 
       // Navegar a la siguiente pantalla
-      if (mounted) {
-        Navigator.pushNamed(context, AppRoutes.physicalCharacteristics);
-      }
-    } catch (e) {
-      _showErrorDialog('Error al guardar: ${e.toString()}');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Error'),
-            content: Text(message),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-    );
+      navigateToNext(AppRoutes.physicalCharacteristics);
+    });
   }
 
   @override
@@ -177,8 +144,8 @@ class _PhoneNumberScreenState extends State<PhoneNumberScreen> {
                 SizedBox(height: screenHeight * 0.5),
                 // Next Button
                 CustomButton(
-                  text: _isLoading ? 'Guardando...' : 'Siguiente',
-                  onPressed: !_isLoading ? _saveAndContinue : null,
+                  text: isLoading ? 'Guardando...' : 'Siguiente',
+                  onPressed: !isLoading ? _saveAndContinue : null,
                   height: screenHeight * AppSizes.buttonHeight,
                 ),
                 SizedBox(height: screenHeight * 0.05),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:newdaddys/theme/app_colors.dart';
 import 'package:newdaddys/theme/app_fonts.dart';
 import 'package:newdaddys/theme/app_sizes.dart';
@@ -7,7 +6,8 @@ import 'package:newdaddys/widgets/custom_app_bar.dart';
 import 'package:newdaddys/widgets/custom_button.dart';
 import 'dart:io'; // Se necesitará para manejar los archivos de imagen
 import 'package:newdaddys/routes/app_routes.dart';
-import 'package:newdaddys/services/firestore_service.dart';
+import 'package:newdaddys/mixins/registration_screen_mixin.dart';
+import 'package:newdaddys/constants/registration_options.dart';
 
 class PhotoUploadScreen extends StatefulWidget {
   const PhotoUploadScreen({super.key});
@@ -16,11 +16,13 @@ class PhotoUploadScreen extends StatefulWidget {
   _PhotoUploadScreenState createState() => _PhotoUploadScreenState();
 }
 
-class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
+class _PhotoUploadScreenState extends State<PhotoUploadScreen>
+    with RegistrationScreenMixin {
   // Lista para almacenar las imágenes seleccionadas (usando File)
-  final List<File?> _images = List.generate(6, (_) => null);
-  bool _isLoading = false;
-  final FirestoreService _firestore = FirestoreService();
+  final List<File?> _images = List.generate(
+    RegistrationOptions.maxPhotos,
+    (_) => null,
+  );
 
   // Función para simular la selección de una imagen
   void _pickImage(int index) {
@@ -35,14 +37,8 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
     // Por ahora, permitir continuar sin fotos (para testing)
     // En producción, podrías requerir al menos una foto
 
-    setState(() => _isLoading = true);
-
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        _showErrorDialog('Usuario no autenticado');
-        return;
-      }
+    await executeWithLoading(() async {
+      final user = getCurrentUser()!;
 
       // Simular URLs de fotos (en producción, subirías a Firebase Storage)
       final photoUrls = <String>[];
@@ -54,34 +50,11 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
       }
 
       // Guardar en Firestore (por ahora con URLs vacías)
-      await _firestore.updatePhotos(userId: user.uid, photoUrls: photoUrls);
+      await firestore.updatePhotos(userId: user.uid, photoUrls: photoUrls);
 
       // Navegar a la siguiente pantalla
-      if (mounted) {
-        Navigator.pushNamed(context, AppRoutes.phoneNumber);
-      }
-    } catch (e) {
-      _showErrorDialog('Error al guardar: ${e.toString()}');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Error'),
-            content: Text(message),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-    );
+      navigateToNext(AppRoutes.phoneNumber);
+    });
   }
 
   @override
@@ -137,8 +110,8 @@ class _PhotoUploadScreenState extends State<PhotoUploadScreen> {
 
               // Botón de siguiente
               CustomButton(
-                text: _isLoading ? 'Guardando...' : 'Siguiente',
-                onPressed: !_isLoading ? _saveAndContinue : null,
+                text: isLoading ? 'Guardando...' : 'Siguiente',
+                onPressed: !isLoading ? _saveAndContinue : null,
                 height: screenHeight * AppSizes.buttonHeight,
               ),
               SizedBox(height: screenHeight * 0.05),

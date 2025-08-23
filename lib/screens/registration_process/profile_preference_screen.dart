@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:newdaddys/theme/app_colors.dart';
 import 'package:newdaddys/theme/app_fonts.dart';
 import 'package:newdaddys/theme/app_sizes.dart';
@@ -7,7 +6,8 @@ import 'package:newdaddys/widgets/custom_app_bar.dart';
 import 'package:newdaddys/widgets/custom_button.dart';
 import 'package:newdaddys/widgets/selection_button.dart';
 import 'package:newdaddys/routes/app_routes.dart';
-import 'package:newdaddys/services/firestore_service.dart';
+import 'package:newdaddys/mixins/registration_screen_mixin.dart';
+import 'package:newdaddys/constants/registration_options.dart';
 
 class ProfilePreferenceScreen extends StatefulWidget {
   const ProfilePreferenceScreen({super.key});
@@ -17,10 +17,9 @@ class ProfilePreferenceScreen extends StatefulWidget {
       _ProfilePreferenceScreenState();
 }
 
-class _ProfilePreferenceScreenState extends State<ProfilePreferenceScreen> {
+class _ProfilePreferenceScreenState extends State<ProfilePreferenceScreen>
+    with RegistrationScreenMixin {
   int? _selectedIndex; // 0 for baby, 1 for daddy/mommy
-  bool _isLoading = false;
-  final FirestoreService _firestore = FirestoreService();
 
   void _onSelection(int index) {
     setState(() {
@@ -29,52 +28,24 @@ class _ProfilePreferenceScreenState extends State<ProfilePreferenceScreen> {
   }
 
   Future<void> _saveAndContinue() async {
-    if (_selectedIndex == null) return;
+    if (!validateRequiredSelection(
+      _selectedIndex != null ? 'selección' : null,
+      'qué estás buscando',
+    )) {
+      return;
+    }
 
-    setState(() => _isLoading = true);
+    await executeWithLoading(() async {
+      final user = getCurrentUser()!;
+      final userType = RegistrationOptions.userTypes[_selectedIndex!];
 
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        _showErrorDialog('Usuario no autenticado');
-        return;
-      }
-
-      // Convertir índice a userType
-      final userType = _selectedIndex == 0 ? 'baby' : 'daddy/mommy';
-
-      // Guardar en Firestore
-      await _firestore.updateProfilePreference(
+      await firestore.updateProfilePreference(
         userId: user.uid,
         userType: userType,
       );
 
-      // Navegar a la siguiente pantalla
-      if (mounted) {
-        Navigator.pushNamed(context, AppRoutes.personalDetails);
-      }
-    } catch (e) {
-      _showErrorDialog('Error al guardar: ${e.toString()}');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Error'),
-            content: Text(message),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-    );
+      navigateToNext(AppRoutes.personalDetails);
+    });
   }
 
   @override
@@ -114,9 +85,9 @@ class _ProfilePreferenceScreenState extends State<ProfilePreferenceScreen> {
               ),
               const Spacer(),
               CustomButton(
-                text: _isLoading ? 'Guardando...' : 'Siguiente',
+                text: isLoading ? 'Guardando...' : 'Siguiente',
                 onPressed:
-                    _selectedIndex != null && !_isLoading
+                    _selectedIndex != null && !isLoading
                         ? _saveAndContinue
                         : null, // Disable button if nothing is selected or loading
                 height: screenHeight * AppSizes.buttonHeight,

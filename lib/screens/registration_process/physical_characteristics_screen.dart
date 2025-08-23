@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:newdaddys/theme/app_colors.dart';
 import 'package:newdaddys/theme/app_fonts.dart';
 import 'package:newdaddys/theme/app_sizes.dart';
@@ -7,7 +6,8 @@ import 'package:newdaddys/widgets/custom_app_bar.dart';
 import 'package:newdaddys/widgets/custom_button.dart';
 import 'package:newdaddys/widgets/selection_button.dart';
 import 'package:newdaddys/routes/app_routes.dart';
-import 'package:newdaddys/services/firestore_service.dart';
+import 'package:newdaddys/mixins/registration_screen_mixin.dart';
+import 'package:newdaddys/constants/registration_options.dart';
 
 class PhysicalCharacteristicsScreen extends StatefulWidget {
   const PhysicalCharacteristicsScreen({super.key});
@@ -18,43 +18,18 @@ class PhysicalCharacteristicsScreen extends StatefulWidget {
 }
 
 class _PhysicalCharacteristicsScreenState
-    extends State<PhysicalCharacteristicsScreen> {
+    extends State<PhysicalCharacteristicsScreen>
+    with RegistrationScreenMixin {
   // State variables
-  double _height = 170;
+  double _height = RegistrationOptions.defaultHeight;
   String? _complexion;
   String? _appearance;
   String? _smokingHabit;
   String? _drinkingHabit;
   final Set<String> _tastes = {};
-  bool _isLoading = false;
-  final FirestoreService _firestore = FirestoreService();
 
   final TextEditingController _storyController = TextEditingController();
   final TextEditingController _seekingController = TextEditingController();
-
-  // Options
-  final List<String> _complexionOptions = [
-    'Delgado',
-    'Promedio',
-    'Musculoso',
-    'Gordito',
-    'Atlético',
-  ];
-  final List<String> _appearanceOptions = [
-    'Muy atractivo',
-    'Atractivo',
-    'Promedio',
-    'Poco atractivo',
-  ];
-  final List<String> _drinkingOptions = ['Sí', 'No', 'De vez en cuando'];
-  final List<String> _tastesOptions = [
-    'Viajes',
-    'Música',
-    'Cine',
-    'Comida',
-    'Arte',
-    'Deportes',
-  ];
 
   @override
   void dispose() {
@@ -90,17 +65,11 @@ class _PhysicalCharacteristicsScreenState
       return;
     }
 
-    setState(() => _isLoading = true);
-
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        _showErrorDialog('Usuario no autenticado');
-        return;
-      }
+    await executeWithLoading(() async {
+      final user = getCurrentUser()!;
 
       // Guardar en Firestore
-      await _firestore.updatePhysicalCharacteristics(
+      await firestore.updatePhysicalCharacteristics(
         userId: user.uid,
         height: _height,
         complexion: _complexion,
@@ -119,18 +88,8 @@ class _PhysicalCharacteristicsScreenState
       );
 
       // Navegar al menú principal
-      if (mounted) {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          AppRoutes.mainMenu,
-          (route) => false,
-        );
-      }
-    } catch (e) {
-      _showErrorDialog('Error al guardar: ${e.toString()}');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
+      navigateToMainMenu();
+    });
   }
 
   void _showErrorDialog(String message) {
@@ -204,7 +163,7 @@ class _PhysicalCharacteristicsScreenState
                 _buildSection(
                   'Complexión',
                   _buildGrid(
-                    options: _complexionOptions,
+                    options: RegistrationOptions.complexionOptions,
                     selectedOptions: {_complexion},
                     onSelect: (option) => setState(() => _complexion = option),
                     itemsPerRow: 3,
@@ -216,7 +175,7 @@ class _PhysicalCharacteristicsScreenState
                 _buildSection(
                   'Apariencia',
                   _buildGrid(
-                    options: _appearanceOptions,
+                    options: RegistrationOptions.appearanceOptions,
                     selectedOptions: {_appearance},
                     onSelect: (option) => setState(() => _appearance = option),
                     itemsPerRow: 3,
@@ -255,7 +214,7 @@ class _PhysicalCharacteristicsScreenState
                 _buildSection(
                   '¿Bebes alcohol?',
                   _buildSingleRowSelection(
-                    options: _drinkingOptions,
+                    options: RegistrationOptions.drinkingOptions,
                     selectedOption: _drinkingHabit,
                     onSelect:
                         (option) => setState(() => _drinkingHabit = option),
@@ -267,7 +226,7 @@ class _PhysicalCharacteristicsScreenState
                 _buildSection(
                   'Tus gustos',
                   _buildGrid(
-                    options: _tastesOptions,
+                    options: RegistrationOptions.tastesOptions,
                     selectedOptions: _tastes,
                     onSelect: _toggleTaste,
                     itemsPerRow: 2,
@@ -278,8 +237,8 @@ class _PhysicalCharacteristicsScreenState
                 ),
                 SizedBox(height: screenHeight * 0.05),
                 CustomButton(
-                  text: _isLoading ? 'Guardando...' : 'Finalizar',
-                  onPressed: !_isLoading ? _saveAndFinish : null,
+                  text: isLoading ? 'Guardando...' : 'Finalizar',
+                  onPressed: !isLoading ? _saveAndFinish : null,
                   height: screenHeight * AppSizes.buttonHeight,
                 ),
                 SizedBox(height: screenHeight * 0.05),

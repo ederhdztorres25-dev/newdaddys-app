@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:newdaddys/theme/app_colors.dart';
 import 'package:newdaddys/theme/app_fonts.dart';
 import 'package:newdaddys/theme/app_sizes.dart';
@@ -8,7 +7,8 @@ import 'package:newdaddys/widgets/custom_button.dart';
 import 'package:newdaddys/widgets/custom_text_field.dart';
 import 'package:newdaddys/widgets/selection_button.dart';
 import 'package:newdaddys/routes/app_routes.dart';
-import 'package:newdaddys/services/firestore_service.dart';
+import 'package:newdaddys/mixins/registration_screen_mixin.dart';
+import 'package:newdaddys/constants/registration_options.dart';
 
 class PersonalDetailsScreen extends StatefulWidget {
   const PersonalDetailsScreen({super.key});
@@ -17,21 +17,12 @@ class PersonalDetailsScreen extends StatefulWidget {
   _PersonalDetailsScreenState createState() => _PersonalDetailsScreenState();
 }
 
-class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
+class _PersonalDetailsScreenState extends State<PersonalDetailsScreen>
+    with RegistrationScreenMixin {
   String? _gender;
   String? _sexualOrientation;
   String? _name;
-  bool _isLoading = false;
-  final FirestoreService _firestore = FirestoreService();
   final TextEditingController _nameController = TextEditingController();
-
-  final List<String> _genderOptions = ['Hombre', 'Mujer', 'No binario'];
-  final List<String> _orientationOptions = [
-    'Heterosexual',
-    'Homosexual',
-    'Lesbiana',
-    'Bisexual',
-  ];
 
   @override
   void dispose() {
@@ -40,64 +31,23 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
   }
 
   Future<void> _saveAndContinue() async {
-    if (_name == null || _name!.trim().isEmpty) {
-      _showErrorDialog('Por favor ingresa tu nombre');
+    if (!validateRequiredField(_name, 'tu nombre')) return;
+    if (!validateRequiredSelection(_gender, 'tu género')) return;
+    if (!validateRequiredSelection(_sexualOrientation, 'tu orientación sexual'))
       return;
-    }
 
-    if (_gender == null) {
-      _showErrorDialog('Por favor selecciona tu género');
-      return;
-    }
+    await executeWithLoading(() async {
+      final user = getCurrentUser()!;
 
-    if (_sexualOrientation == null) {
-      _showErrorDialog('Por favor selecciona tu orientación sexual');
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        _showErrorDialog('Usuario no autenticado');
-        return;
-      }
-
-      // Guardar en Firestore
-      await _firestore.updatePersonalDetails(
+      await firestore.updatePersonalDetails(
         userId: user.uid,
         name: _name!.trim(),
         gender: _gender,
         sexualOrientation: _sexualOrientation,
       );
 
-      // Navegar a la siguiente pantalla
-      if (mounted) {
-        Navigator.pushNamed(context, AppRoutes.photoUpload);
-      }
-    } catch (e) {
-      _showErrorDialog('Error al guardar: ${e.toString()}');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Error'),
-            content: Text(message),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-    );
+      navigateToNext(AppRoutes.photoUpload);
+    });
   }
 
   @override
@@ -149,8 +99,8 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
 
                 // Next Button
                 CustomButton(
-                  text: _isLoading ? 'Guardando...' : 'Siguiente',
-                  onPressed: !_isLoading ? _saveAndContinue : null,
+                  text: isLoading ? 'Guardando...' : 'Siguiente',
+                  onPressed: !isLoading ? _saveAndContinue : null,
                   height: screenHeight * AppSizes.buttonHeight,
                 ),
                 SizedBox(height: screenHeight * 0.05),
@@ -180,7 +130,7 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
       spacing: 10.0,
       runSpacing: 10.0,
       children:
-          _genderOptions.map((option) {
+          RegistrationOptions.genderOptions.map((option) {
             return SizedBox(
               width: (screenWidth * 0.84 - 20) / 3,
               child: SelectionButton(
@@ -202,11 +152,15 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
             SizedBox(
               width: (screenWidth * 0.84 - 10) / 2,
               child: SelectionButton(
-                text: _orientationOptions[0],
-                isSelected: _sexualOrientation == _orientationOptions[0],
+                text: RegistrationOptions.sexualOrientationOptions[0],
+                isSelected:
+                    _sexualOrientation ==
+                    RegistrationOptions.sexualOrientationOptions[0],
                 onTap:
                     () => setState(
-                      () => _sexualOrientation = _orientationOptions[0],
+                      () =>
+                          _sexualOrientation =
+                              RegistrationOptions.sexualOrientationOptions[0],
                     ),
                 height: screenHeight * AppSizes.buttonHeight,
               ),
@@ -215,11 +169,15 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
             SizedBox(
               width: (screenWidth * 0.84 - 10) / 2,
               child: SelectionButton(
-                text: _orientationOptions[1],
-                isSelected: _sexualOrientation == _orientationOptions[1],
+                text: RegistrationOptions.sexualOrientationOptions[1],
+                isSelected:
+                    _sexualOrientation ==
+                    RegistrationOptions.sexualOrientationOptions[1],
                 onTap:
                     () => setState(
-                      () => _sexualOrientation = _orientationOptions[1],
+                      () =>
+                          _sexualOrientation =
+                              RegistrationOptions.sexualOrientationOptions[1],
                     ),
                 height: screenHeight * AppSizes.buttonHeight,
               ),
@@ -232,11 +190,15 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
             SizedBox(
               width: (screenWidth * 0.84 - 10) / 2,
               child: SelectionButton(
-                text: _orientationOptions[2],
-                isSelected: _sexualOrientation == _orientationOptions[2],
+                text: RegistrationOptions.sexualOrientationOptions[2],
+                isSelected:
+                    _sexualOrientation ==
+                    RegistrationOptions.sexualOrientationOptions[2],
                 onTap:
                     () => setState(
-                      () => _sexualOrientation = _orientationOptions[2],
+                      () =>
+                          _sexualOrientation =
+                              RegistrationOptions.sexualOrientationOptions[2],
                     ),
                 height: screenHeight * AppSizes.buttonHeight,
               ),
@@ -245,11 +207,15 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
             SizedBox(
               width: (screenWidth * 0.84 - 10) / 2,
               child: SelectionButton(
-                text: _orientationOptions[3],
-                isSelected: _sexualOrientation == _orientationOptions[3],
+                text: RegistrationOptions.sexualOrientationOptions[3],
+                isSelected:
+                    _sexualOrientation ==
+                    RegistrationOptions.sexualOrientationOptions[3],
                 onTap:
                     () => setState(
-                      () => _sexualOrientation = _orientationOptions[3],
+                      () =>
+                          _sexualOrientation =
+                              RegistrationOptions.sexualOrientationOptions[3],
                     ),
                 height: screenHeight * AppSizes.buttonHeight,
               ),
