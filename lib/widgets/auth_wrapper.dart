@@ -26,7 +26,9 @@ class AuthWrapper extends StatelessWidget {
             // Mientras se verifica el perfil, mostrar loading
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Scaffold(
-                body: Center(child: CircularProgressIndicator()),
+                body: Center(
+                  child: CircularProgressIndicator(),
+                ),
               );
             }
 

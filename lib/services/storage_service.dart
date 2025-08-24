@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
+import 'package:newdaddys/constants/app_constants.dart';
+import 'package:newdaddys/utils/logger.dart';
 
+/// Servicio para manejo de imágenes y almacenamiento en Firebase Storage
 class StorageService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
   final ImagePicker _picker = ImagePicker();
@@ -11,25 +14,24 @@ class StorageService {
   /// Selecciona una imagen de la galería o cámara
   Future<File?> pickImage({bool fromCamera = false}) async {
     try {
-      print('Iniciando selección de imagen...');
+      Logger.process('Iniciando selección de imagen', tag: 'StorageService');
 
-      // Seleccionar imagen directamente
       final XFile? image = await _picker.pickImage(
         source: fromCamera ? ImageSource.camera : ImageSource.gallery,
-        maxWidth: 1920,
-        maxHeight: 1920,
-        imageQuality: 90,
+        maxWidth: AppConstants.maxImageWidth.toDouble(),
+        maxHeight: AppConstants.maxImageHeight.toDouble(),
+        imageQuality: AppConstants.imageQuality,
       );
 
       if (image == null) {
-        print('No se seleccionó imagen');
+        Logger.info('Selección de imagen cancelada', tag: 'StorageService');
         return null;
       }
 
-      print('Imagen seleccionada: ${image.path}');
+      Logger.success('Imagen seleccionada: ${image.path}', tag: 'StorageService');
       return File(image.path);
     } catch (e) {
-      print('Error al seleccionar imagen: $e');
+      Logger.error('Error al seleccionar imagen', tag: 'StorageService', error: e);
       throw Exception('Error al seleccionar imagen: $e');
     }
   }
@@ -37,14 +39,17 @@ class StorageService {
   /// Recorta la imagen a proporción 4:5
   Future<File?> cropImage(File imageFile) async {
     try {
-      print('Iniciando recorte de imagen...');
+      Logger.process('Iniciando recorte de imagen', tag: 'StorageService');
 
       final croppedFile = await ImageCropper().cropImage(
         sourcePath: imageFile.path,
-        aspectRatio: const CropAspectRatio(ratioX: 4, ratioY: 5),
-        compressQuality: 85,
-        maxWidth: 1080,
-        maxHeight: 1350,
+        aspectRatio: const CropAspectRatio(
+          ratioX: AppConstants.cropAspectRatioX,
+          ratioY: AppConstants.cropAspectRatioY,
+        ),
+        compressQuality: AppConstants.cropQuality,
+        maxWidth: AppConstants.maxCropWidth,
+        maxHeight: AppConstants.maxCropHeight,
         uiSettings: [
           AndroidUiSettings(
             toolbarTitle: 'Recortar foto',
@@ -63,14 +68,14 @@ class StorageService {
       );
 
       if (croppedFile == null) {
-        print('Recorte cancelado');
+        Logger.info('Recorte de imagen cancelado', tag: 'StorageService');
         return null;
       }
 
-      print('Imagen recortada: ${croppedFile.path}');
+      Logger.success('Imagen recortada: ${croppedFile.path}', tag: 'StorageService');
       return File(croppedFile.path);
     } catch (e) {
-      print('Error al recortar imagen: $e');
+      Logger.error('Error al recortar imagen', tag: 'StorageService', error: e);
       throw Exception('Error al recortar imagen: $e');
     }
   }
@@ -82,14 +87,14 @@ class StorageService {
     int photoIndex,
   ) async {
     try {
-      print('Iniciando subida de imagen...');
+      Logger.process('Iniciando subida de imagen', tag: 'StorageService');
 
       // Crear referencia al archivo en Storage
       final storageRef = _storage
           .ref()
-          .child('profile_photos')
+          .child(AppConstants.profilePhotosPath)
           .child(userId)
-          .child('photo_$photoIndex.jpg');
+          .child('${AppConstants.photoFileName}$photoIndex${AppConstants.photoExtension}');
 
       // Subir archivo
       final uploadTask = storageRef.putFile(
@@ -110,10 +115,10 @@ class StorageService {
       // Obtener URL de descarga
       final downloadUrl = await snapshot.ref.getDownloadURL();
 
-      print('Imagen subida exitosamente: $downloadUrl');
+      Logger.success('Imagen subida exitosamente: $downloadUrl', tag: 'StorageService');
       return downloadUrl;
     } catch (e) {
-      print('Error al subir imagen: $e');
+      Logger.error('Error al subir imagen', tag: 'StorageService', error: e);
       throw Exception('Error al subir imagen: $e');
     }
   }
@@ -125,7 +130,7 @@ class StorageService {
     bool fromCamera = false,
   }) async {
     try {
-      print('Iniciando proceso completo de foto...');
+      Logger.process('Iniciando proceso completo de foto', tag: 'StorageService');
 
       // 1. Seleccionar imagen
       final File? selectedImage = await pickImage(fromCamera: fromCamera);
@@ -142,11 +147,31 @@ class StorageService {
         photoIndex,
       );
 
-      print('Proceso completo exitoso');
+      Logger.success('Proceso completo exitoso', tag: 'StorageService');
       return downloadUrl;
     } catch (e) {
-      print('Error en el proceso de foto: $e');
+      Logger.error('Error en el proceso de foto', tag: 'StorageService', error: e);
       throw Exception('Error en el proceso de foto: $e');
+    }
+  }
+
+  /// Elimina una foto del perfil de Firebase Storage
+  Future<void> deleteProfilePhoto(String userId, int photoIndex) async {
+    try {
+      Logger.process('Eliminando foto del perfil', tag: 'StorageService');
+
+      final storageRef = _storage
+          .ref()
+          .child(AppConstants.profilePhotosPath)
+          .child(userId)
+          .child('${AppConstants.photoFileName}$photoIndex${AppConstants.photoExtension}');
+
+      await storageRef.delete();
+
+      Logger.success('Foto eliminada exitosamente', tag: 'StorageService');
+    } catch (e) {
+      Logger.error('Error al eliminar foto', tag: 'StorageService', error: e);
+      throw Exception('Error al eliminar foto: $e');
     }
   }
 }

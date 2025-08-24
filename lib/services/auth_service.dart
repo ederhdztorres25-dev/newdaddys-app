@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:newdaddys/services/firestore_service.dart';
+import 'package:newdaddys/utils/logger.dart';
+import 'package:newdaddys/utils/validation_utils.dart';
 
 /// Resultado de una operación de autenticación
 class AuthResult {
@@ -54,6 +56,7 @@ class AuthService extends ChangeNotifier {
   /// Configura el listener para cambios en el estado de autenticación
   void _setupAuthStateListener() {
     _auth.authStateChanges().listen((User? user) {
+      Logger.debug('Estado de autenticación cambiado: ${user?.email ?? 'No autenticado'}', tag: 'AuthService');
       notifyListeners();
     });
   }
@@ -66,7 +69,17 @@ class AuthService extends ChangeNotifier {
     required String password,
   }) async {
     try {
-      _log('Iniciando registro con email: $email');
+      Logger.process('Iniciando registro con email: $email', tag: 'AuthService');
+
+      // Validar email
+      if (!ValidationUtils.isValidEmail(email)) {
+        return AuthResult.error(ValidationUtils.getInvalidEmailMessage());
+      }
+
+      // Validar contraseña
+      if (!ValidationUtils.isValidPassword(password)) {
+        return AuthResult.error(ValidationUtils.getWeakPasswordMessage());
+      }
 
       final UserCredential result = await _auth.createUserWithEmailAndPassword(
         email: email,
@@ -79,15 +92,15 @@ class AuthService extends ChangeNotifier {
       // NO crear perfil automáticamente - el usuario debe completar el proceso de registro
       // El perfil se creará en la primera pantalla del proceso de registro
 
-      _log('Registro exitoso, email de verificación enviado');
+      Logger.success('Registro exitoso, email de verificación enviado', tag: 'AuthService');
       return AuthResult.success(
         message: 'Registro exitoso. Verifica tu email y completa tu perfil.',
       );
     } on FirebaseAuthException catch (e) {
-      _log('Error en registro: ${e.code} - ${e.message}');
+      Logger.error('Error en registro: ${e.code}', tag: 'AuthService', error: e.message);
       return AuthResult.error(_getErrorMessage(e.code));
     } catch (e) {
-      _log('Error inesperado en registro: $e');
+      Logger.error('Error inesperado en registro', tag: 'AuthService', error: e);
       return AuthResult.error('Error inesperado: $e');
     }
   }
@@ -100,17 +113,22 @@ class AuthService extends ChangeNotifier {
     required String password,
   }) async {
     try {
-      _log('Iniciando login con email: $email');
+      Logger.process('Iniciando login con email: $email', tag: 'AuthService');
+
+      // Validar email
+      if (!ValidationUtils.isValidEmail(email)) {
+        return AuthResult.error(ValidationUtils.getInvalidEmailMessage());
+      }
 
       await _auth.signInWithEmailAndPassword(email: email, password: password);
 
-      _log('Login exitoso');
+      Logger.success('Login exitoso', tag: 'AuthService');
       return AuthResult.success(message: 'Login exitoso');
     } on FirebaseAuthException catch (e) {
-      _log('Error en login: ${e.code} - ${e.message}');
+      Logger.error('Error en login: ${e.code}', tag: 'AuthService', error: e.message);
       return AuthResult.error(_getErrorMessage(e.code));
     } catch (e) {
-      _log('Error inesperado en login: $e');
+      Logger.error('Error inesperado en login', tag: 'AuthService', error: e);
       return AuthResult.error('Error inesperado: $e');
     }
   }
@@ -118,18 +136,17 @@ class AuthService extends ChangeNotifier {
   /// Inicia sesión con Google
   Future<AuthResult> signInWithGoogle() async {
     try {
-      _log('Iniciando login con Google');
+      Logger.process('Iniciando login con Google', tag: 'AuthService');
 
       // Obtener cuenta de Google
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
-        _log('Usuario canceló el login con Google');
+        Logger.info('Usuario canceló el login con Google', tag: 'AuthService');
         return AuthResult.error('Login cancelado por el usuario');
       }
 
       // Obtener credenciales de Google
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
       // Crear credenciales para Firebase
       final credential = GoogleAuthProvider.credential(
@@ -138,20 +155,18 @@ class AuthService extends ChangeNotifier {
       );
 
       // Autenticar con Firebase
-      final UserCredential userCredential = await _auth.signInWithCredential(
-        credential,
-      );
+      final UserCredential userCredential = await _auth.signInWithCredential(credential);
 
       // NO crear perfil automáticamente - el usuario debe completar el proceso de registro
       // El perfil se creará en la primera pantalla del proceso de registro
 
-      _log('Login con Google exitoso para: ${userCredential.user?.email}');
+      Logger.success('Login con Google exitoso para: ${userCredential.user?.email}', tag: 'AuthService');
       return AuthResult.success(message: 'Login con Google exitoso');
     } on FirebaseAuthException catch (e) {
-      _log('Error de Firebase en login con Google: ${e.code} - ${e.message}');
+      Logger.error('Error de Firebase en login con Google: ${e.code}', tag: 'AuthService', error: e.message);
       return AuthResult.error(_getErrorMessage(e.code));
     } catch (e) {
-      _log('Error inesperado en login con Google: $e');
+      Logger.error('Error inesperado en login con Google', tag: 'AuthService', error: e);
       return AuthResult.error('Error en login con Google: $e');
     }
   }
@@ -165,11 +180,14 @@ class AuthService extends ChangeNotifier {
       final user = _auth.currentUser;
 
       if (user?.emailVerified == true) {
+        Logger.success('Email verificado', tag: 'AuthService');
         return AuthResult.success(message: 'Email verificado');
       } else {
+        Logger.warning('Email no verificado', tag: 'AuthService');
         return AuthResult.error('Email no verificado');
       }
     } catch (e) {
+      Logger.error('Error al verificar email', tag: 'AuthService', error: e);
       return AuthResult.error('Error al verificar email: $e');
     }
   }
@@ -178,8 +196,10 @@ class AuthService extends ChangeNotifier {
   Future<AuthResult> resendEmailVerification() async {
     try {
       await _auth.currentUser?.sendEmailVerification();
+      Logger.success('Email de verificación reenviado', tag: 'AuthService');
       return AuthResult.success(message: 'Email de verificación reenviado');
     } catch (e) {
+      Logger.error('Error al reenviar email', tag: 'AuthService', error: e);
       return AuthResult.error('Error al reenviar email: $e');
     }
   }
@@ -189,7 +209,7 @@ class AuthService extends ChangeNotifier {
   /// Cierra la sesión del usuario (Firebase + Google)
   Future<void> signOut() async {
     try {
-      _log('Iniciando cierre de sesión');
+      Logger.process('Iniciando cierre de sesión', tag: 'AuthService');
 
       // Cerrar sesión de Firebase
       await _auth.signOut();
@@ -197,9 +217,9 @@ class AuthService extends ChangeNotifier {
       // Cerrar sesión de Google también
       await _googleSignIn.signOut();
 
-      _log('Cierre de sesión exitoso (Firebase + Google)');
+      Logger.success('Cierre de sesión exitoso (Firebase + Google)', tag: 'AuthService');
     } catch (e) {
-      _log('Error en cierre de sesión: $e');
+      Logger.error('Error en cierre de sesión', tag: 'AuthService', error: e);
     }
   }
 
@@ -209,8 +229,10 @@ class AuthService extends ChangeNotifier {
   Future<AuthResult> deleteAccount() async {
     try {
       await _auth.currentUser?.delete();
+      Logger.success('Cuenta eliminada', tag: 'AuthService');
       return AuthResult.success(message: 'Cuenta eliminada');
     } catch (e) {
+      Logger.error('Error al eliminar cuenta', tag: 'AuthService', error: e);
       return AuthResult.error('Error al eliminar cuenta: $e');
     }
   }
@@ -238,13 +260,6 @@ class AuthService extends ChangeNotifier {
         return 'Operación no permitida';
       default:
         return 'Error de autenticación: $code';
-    }
-  }
-
-  /// Log para debugging (solo en modo debug)
-  void _log(String message) {
-    if (kDebugMode) {
-      print('AuthService: $message');
     }
   }
 }
