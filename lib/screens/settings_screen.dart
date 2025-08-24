@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:newdaddys/services/auth_service.dart';
+import 'package:newdaddys/services/storage_service.dart';
 import 'package:newdaddys/theme/app_colors.dart';
 import 'package:newdaddys/theme/app_fonts.dart';
 import 'package:newdaddys/widgets/app_bottom_nav_bar.dart';
@@ -81,8 +82,10 @@ class SettingsScreen extends StatelessWidget {
               _SettingsListItem(
                 icon: Icons.article_outlined,
                 title: 'Términos y condiciones',
+                subtitle: 'Botón de pruebas - Subir foto',
+                subtitleColor: AppColors.gold,
                 trailing: const Icon(Icons.chevron_right, color: Colors.white),
-                onTap: () {},
+                onTap: () => _testPhotoUpload(context),
               ),
 
               const SizedBox(height: 32),
@@ -145,6 +148,96 @@ class SettingsScreen extends StatelessWidget {
         color: AppColors.placeholderText,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.5,
+      ),
+    );
+  }
+
+  void _testPhotoUpload(BuildContext context) async {
+    try {
+      // Mostrar diálogo de selección
+      final bool? fromCamera = await showDialog<bool>(
+        context: context,
+        builder:
+            (context) => AlertDialog(
+              backgroundColor: AppColors.primary,
+              title: Text(
+                'Prueba de Subida de Fotos',
+                style: AppFonts.h3.copyWith(color: Colors.white),
+              ),
+              content: Text(
+                '¿De dónde quieres seleccionar la foto?',
+                style: AppFonts.bodyMedium.copyWith(color: Colors.white),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false), // Galería
+                  child: Text(
+                    'Galería',
+                    style: AppFonts.bodyMedium.copyWith(color: Colors.white),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true), // Cámara
+                  child: Text(
+                    'Cámara',
+                    style: AppFonts.bodyMedium.copyWith(color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+      );
+
+      if (fromCamera == null) return; // Usuario canceló
+
+      // Mostrar indicador de carga
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder:
+            (context) => const Center(
+              child: CircularProgressIndicator(color: AppColors.gold),
+            ),
+      );
+
+      // Obtener usuario actual
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final user = authService.currentUser;
+
+      if (user == null) {
+        Navigator.pop(context); // Cerrar loading
+        _showErrorSnackBar(context, 'Usuario no autenticado');
+        return;
+      }
+
+      // Probar subida de foto
+      final storageService = StorageService();
+      final photoUrl = await storageService.selectCropAndUploadPhoto(
+        userId: user.uid,
+        photoIndex: 0,
+        fromCamera: fromCamera,
+      );
+
+      Navigator.pop(context); // Cerrar loading
+
+      if (photoUrl == null) {
+        _showErrorSnackBar(context, 'No se pudo subir la foto');
+      }
+    } catch (e) {
+      // Cerrar loading si está abierto
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+
+      _showErrorSnackBar(context, 'Error: ${e.toString()}');
+    }
+  }
+
+  void _showErrorSnackBar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.danger,
+        duration: const Duration(seconds: 5),
       ),
     );
   }

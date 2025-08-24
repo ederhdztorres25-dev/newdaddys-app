@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:newdaddys/theme/app_colors.dart';
 import 'package:newdaddys/theme/app_fonts.dart';
 import 'package:newdaddys/theme/app_sizes.dart';
@@ -8,6 +9,7 @@ import 'package:newdaddys/widgets/selection_button.dart';
 import 'package:newdaddys/routes/app_routes.dart';
 import 'package:newdaddys/mixins/registration_screen_mixin.dart';
 import 'package:newdaddys/constants/registration_options.dart';
+import 'package:newdaddys/services/auth_service.dart';
 
 class ProfilePreferenceScreen extends StatefulWidget {
   const ProfilePreferenceScreen({super.key});
@@ -48,6 +50,11 @@ class _ProfilePreferenceScreenState extends State<ProfilePreferenceScreen>
     });
   }
 
+  Future<void> _handleBackPressed() async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    await authService.signOut();
+  }
+
   @override
   Widget build(BuildContext context) {
     final double screenHeight = MediaQuery.of(context).size.height;
@@ -55,7 +62,10 @@ class _ProfilePreferenceScreenState extends State<ProfilePreferenceScreen>
 
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
-      appBar: const CustomAppBar(title: 'Crea tu perfil'),
+      appBar: CustomAppBar(
+        title: 'Crea tu perfil',
+        onBackPressed: _handleBackPressed,
+      ),
       body: SafeArea(
         child: Padding(
           padding: EdgeInsets.symmetric(

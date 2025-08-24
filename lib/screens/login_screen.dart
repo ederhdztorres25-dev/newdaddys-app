@@ -112,26 +112,29 @@ class _LoginScreenState extends State<LoginScreen> {
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.primary,
-        title: Text(
-          'Error',
-          style: AppFonts.h3.copyWith(color: Colors.white),
-        ),
-        content: Text(
-          message,
-          style: AppFonts.bodyMedium.copyWith(color: Colors.white),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'OK',
-              style: AppFonts.bodyMedium.copyWith(color: AppColors.secondary),
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: AppColors.primary,
+            title: Text(
+              'Error',
+              style: AppFonts.h3.copyWith(color: Colors.white),
             ),
+            content: Text(
+              message,
+              style: AppFonts.bodyMedium.copyWith(color: Colors.white),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  'OK',
+                  style: AppFonts.bodyMedium.copyWith(
+                    color: AppColors.secondary,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -231,7 +234,8 @@ class _LoginScreenState extends State<LoginScreen> {
     return Align(
       alignment: Alignment.centerRight,
       child: GestureDetector(
-        onTap: () => Navigator.pushNamed(context, AppRoutes.recoveryPasswordStep1),
+        onTap:
+            () => Navigator.pushNamed(context, AppRoutes.recoveryPasswordStep1),
         child: Text(
           '¿Olvidaste tu contraseña?',
           style: AppFonts.bodyMedium.copyWith(color: AppColors.secondary),
@@ -267,10 +271,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildGoogleButton(double screenHeight) {
     return SocialButton(
       text: 'Continuar con Google',
-      icon: Icon(
-        Icons.account_circle,
-        color: AppColors.placeholderText,
-      ),
+      icon: Icon(Icons.account_circle, color: AppColors.placeholderText),
       onPressed: _isLoading ? null : _handleGoogleLogin,
       height: screenHeight * AppSizes.buttonHeight,
     );

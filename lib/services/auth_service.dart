@@ -37,6 +37,12 @@ class AuthService extends ChangeNotifier {
   /// Obtiene el email del usuario actual
   String? get userEmail => _auth.currentUser?.email;
 
+  /// Verifica si el perfil del usuario está completo
+  Future<bool> isProfileComplete() async {
+    if (!isAuthenticated) return false;
+    return await _firestore.isProfileComplete(_auth.currentUser!.uid);
+  }
+
   // ==================== CONSTRUCTOR ====================
 
   AuthService() {
@@ -70,20 +76,12 @@ class AuthService extends ChangeNotifier {
       // Enviar email de verificación automáticamente
       await result.user?.sendEmailVerification();
 
-      // Crear perfil básico en Firestore si no existe
-      if (result.user != null) {
-        final exists = await _firestore.profileExists(result.user!.uid);
-        if (!exists) {
-          await _firestore.createUserProfile(
-            userId: result.user!.uid,
-            email: email,
-          );
-        }
-      }
+      // NO crear perfil automáticamente - el usuario debe completar el proceso de registro
+      // El perfil se creará en la primera pantalla del proceso de registro
 
-      _log('Registro exitoso, email de verificación enviado y perfil creado');
+      _log('Registro exitoso, email de verificación enviado');
       return AuthResult.success(
-        message: 'Registro exitoso. Verifica tu email.',
+        message: 'Registro exitoso. Verifica tu email y completa tu perfil.',
       );
     } on FirebaseAuthException catch (e) {
       _log('Error en registro: ${e.code} - ${e.message}');
@@ -144,16 +142,8 @@ class AuthService extends ChangeNotifier {
         credential,
       );
 
-      // Crear perfil básico si no existe
-      if (userCredential.user != null) {
-        final exists = await _firestore.profileExists(userCredential.user!.uid);
-        if (!exists) {
-          await _firestore.createUserProfile(
-            userId: userCredential.user!.uid,
-            email: userCredential.user!.email ?? '',
-          );
-        }
-      }
+      // NO crear perfil automáticamente - el usuario debe completar el proceso de registro
+      // El perfil se creará en la primera pantalla del proceso de registro
 
       _log('Login con Google exitoso para: ${userCredential.user?.email}');
       return AuthResult.success(message: 'Login con Google exitoso');

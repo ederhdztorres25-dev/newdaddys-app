@@ -49,6 +49,12 @@ dependencies:
   # SVG support
   flutter_svg: ^2.0.10+1
 
+  # Image handling and storage
+  firebase_storage: ^12.0.0
+  image_picker: ^1.0.7
+  image_cropper: ^9.1.0
+  permission_handler: ^11.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

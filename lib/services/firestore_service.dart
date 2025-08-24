@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:newdaddys/models/user_profile.dart';
 
 class FirestoreService {
@@ -49,15 +50,101 @@ class FirestoreService {
     }
   }
 
+  /// Verifica si el perfil del usuario está completo (tiene todos los campos obligatorios)
+  Future<bool> isProfileComplete(String userId) async {
+    try {
+      final doc = await _firestore.collection(_collection).doc(userId).get();
+      if (!doc.exists) return false;
+
+      final data = doc.data() as Map<String, dynamic>?;
+      if (data == null) return false;
+
+      // Verificar campos obligatorios para un perfil completo
+      final hasUserType =
+          data['userType'] != null && data['userType'].toString().isNotEmpty;
+      final hasName =
+          data['name'] != null && data['name'].toString().isNotEmpty;
+      final hasGender =
+          data['gender'] != null && data['gender'].toString().isNotEmpty;
+      final hasSexualOrientation =
+          data['sexualOrientation'] != null &&
+          data['sexualOrientation'].toString().isNotEmpty;
+      final hasPhotos =
+          data['profilePhotos'] != null &&
+          (data['profilePhotos'] as List).isNotEmpty;
+      final hasPhoneNumber =
+          data['phoneNumber'] != null &&
+          data['phoneNumber'].toString().isNotEmpty;
+      final hasHeight = data['height'] != null;
+      final hasComplexion =
+          data['complexion'] != null &&
+          data['complexion'].toString().isNotEmpty;
+      final hasAppearance =
+          data['appearance'] != null &&
+          data['appearance'].toString().isNotEmpty;
+      final hasSmokingHabit =
+          data['smokingHabit'] != null &&
+          data['smokingHabit'].toString().isNotEmpty;
+      final hasDrinkingHabit =
+          data['drinkingHabit'] != null &&
+          data['drinkingHabit'].toString().isNotEmpty;
+      final hasTastes =
+          data['tastes'] != null && (data['tastes'] as List).isNotEmpty;
+      final hasStory =
+          data['story'] != null && data['story'].toString().isNotEmpty;
+      final hasSeeking =
+          data['seeking'] != null && data['seeking'].toString().isNotEmpty;
+
+      return hasUserType &&
+          hasName &&
+          hasGender &&
+          hasSexualOrientation &&
+          hasPhotos &&
+          hasPhoneNumber &&
+          hasHeight &&
+          hasComplexion &&
+          hasAppearance &&
+          hasSmokingHabit &&
+          hasDrinkingHabit &&
+          hasTastes &&
+          hasStory &&
+          hasSeeking;
+    } catch (e) {
+      print('Error checking profile completion: $e');
+      return false;
+    }
+  }
+
   /// Actualiza la preferencia de perfil (baby/daddy)
   Future<void> updateProfilePreference({
     required String userId,
     required String userType,
   }) async {
-    await _firestore.collection(_collection).doc(userId).update({
+    final now = DateTime.now();
+    final updates = {
       'userType': userType,
-      'updatedAt': Timestamp.fromDate(DateTime.now()),
-    });
+      'updatedAt': Timestamp.fromDate(now),
+    };
+
+    // Verificar si el documento existe
+    final docRef = _firestore.collection(_collection).doc(userId);
+    final doc = await docRef.get();
+
+    if (doc.exists) {
+      // Si existe, hacer update
+      await docRef.update(updates);
+    } else {
+      // Si no existe, crear el documento con datos básicos
+      final user = FirebaseAuth.instance.currentUser;
+      final basicProfile = {
+        'id': userId,
+        'email': user?.email ?? '',
+        'userType': userType,
+        'createdAt': Timestamp.fromDate(now),
+        'updatedAt': Timestamp.fromDate(now),
+      };
+      await docRef.set(basicProfile);
+    }
   }
 
   /// Actualiza los datos personales

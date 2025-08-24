@@ -6,11 +6,13 @@ import 'package:newdaddys/theme/app_fonts.dart';
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final List<Widget>? actions;
+  final VoidCallback? onBackPressed;
 
   const CustomAppBar({
     super.key,
     required this.title,
     this.actions,
+    this.onBackPressed,
   });
 
   @override
@@ -25,7 +27,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       leading: Padding(
         padding: EdgeInsets.only(left: size.width * 0.02), // Ajusta el padding
         child: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: onBackPressed ?? () => Navigator.of(context).pop(),
           icon: SvgPicture.asset(
             'assets/icons/move-left.svg',
             color: AppColors.secondary,
