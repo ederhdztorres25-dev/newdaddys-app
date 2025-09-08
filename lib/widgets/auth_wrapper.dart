@@ -24,7 +24,7 @@ class AuthWrapper extends StatelessWidget {
     if (authService.isAuthenticated) {
       return const MainMenuScreen();
     }
-    
+
     // Si no está autenticado, mostrar la pantalla de login
     return const LoginScreen();
   }

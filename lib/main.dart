@@ -1,20 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
-import 'package:newdaddys/services/auth_service.dart';
 import 'package:newdaddys/firebase_options.dart';
+import 'package:newdaddys/services/auth_service.dart';
 import 'package:newdaddys/widgets/auth_wrapper.dart';
 import 'package:newdaddys/screens/main_menu_screen.dart';
-import 'package:newdaddys/screens/recovery_password_process/recovery_password_step1_screen.dart';
-import 'package:newdaddys/screens/recovery_password_process/recovery_password_step2_screen.dart';
-import 'package:newdaddys/screens/registration_screen.dart';
 import 'package:newdaddys/screens/login_screen.dart';
-import 'package:newdaddys/screens/registration_process/verification_screen.dart';
-import 'package:newdaddys/screens/registration_process/profile_preference_screen.dart';
-import 'package:newdaddys/screens/registration_process/personal_details_screen.dart';
-import 'package:newdaddys/screens/registration_process/photo_upload_screen.dart';
-import 'package:newdaddys/screens/registration_process/physical_characteristics_screen.dart';
-import 'package:newdaddys/screens/registration_process/phone_number_screen.dart';
+import 'package:newdaddys/screens/registration_screen.dart';
 import 'package:newdaddys/routes/app_routes.dart';
 
 void main() async {
@@ -38,20 +30,8 @@ class MyApp extends StatelessWidget {
         initialRoute: '/',
         routes: {
           AppRoutes.login: (context) => const LoginScreen(),
-          AppRoutes.recoveryPasswordStep1:
-              (context) => const RecoveryPasswordStep1Screen(),
-          AppRoutes.recoveryPasswordStep2:
-              (context) => const RecoveryPasswordStep2Screen(),
           AppRoutes.mainMenu: (context) => const MainMenuScreen(),
           AppRoutes.registration: (context) => const RegistrationScreen(),
-          AppRoutes.verification: (context) => const VerificationScreen(),
-          AppRoutes.profilePreference:
-              (context) => const ProfilePreferenceScreen(),
-          AppRoutes.personalDetails: (context) => const PersonalDetailsScreen(),
-          AppRoutes.photoUpload: (context) => const PhotoUploadScreen(),
-          AppRoutes.physicalCharacteristics:
-              (context) => const PhysicalCharacteristicsScreen(),
-          AppRoutes.phoneNumber: (context) => const PhoneNumberScreen(),
         },
       ),
     );
